@@ -2,7 +2,10 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <time.h>
 
 #define CUDA_CHECK(ans)                        \
     {                                          \
@@ -17,6 +20,7 @@ inline void cudaAssert(cudaError_t code, const char* file, int line) {
     }
 }
 #define CEIL_DIV(x, y) ((x) >= 0 ? (((x) + (y) - 1) / (y)) : ((x) / (y)))
+#define M_PI 3.14159265358979323846f
 #define TILE_SIZE 16
 
 /*
@@ -86,4 +90,124 @@ __global__ void tiled_gemm_kernel(float* __restrict__ Ad, float* __restrict__ Bd
     if (row < M && col < N) {
         Cd[row * N + col] = acc;
     }
+}
+
+void gemm_cpu_naive(float* A, float* B, float* C, int M, int N, int K) {
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            float sum = 0.f;
+            for (int k = 0; k < K; k++) {
+                sum += (A[i * K + k] * B[k * N + j]);
+            }
+            C[i * N + j] = sum;
+        }
+    }
+}
+
+/*
+Helper function to generate a clamped random number sampled from a
+normal distribution with mean 0 and std 1
+*/
+float random_normal_clamped(float min, float max) {
+    float u1 = (float)rand() / RAND_MAX;
+    float u2 = (float)rand() / RAND_MAX;
+    float num = sqrtf(-2.0f * logf(u1)) * cosf(2.0f * M_PI * u2);
+    if (num < min)
+        return min;
+    if (num > max)
+        return max;
+    return num;
+}
+
+int main() {
+    int M = 4096;
+    int N = 4096;
+    int K = 4096;
+
+    int a_size = M * K;
+    int b_size = K * N;
+    int c_size = M * N;
+
+    printf("Shape A: (%d, %d)\n", M, K);
+    printf("Shape B: (%d, %d)\n", K, N);
+    printf("Shape C: (%d, %d)\n", M, N);
+
+    float* A = (float*)malloc(a_size * sizeof(float));
+    float* B = (float*)malloc(b_size * sizeof(float));
+    float* C = (float*)malloc(c_size * sizeof(float));
+    float* C_cpu = (float*)malloc(c_size * sizeof(float));
+
+    // init the matrices with random values
+    for (int i = 0; i < a_size; i++) {
+        A[i] = random_normal_clamped(-10, 10);
+    }
+    for (int i = 0; i < b_size; i++) {
+        B[i] = random_normal_clamped(-10, 10);
+    }
+    for (int i = 0; i < b_size; i++) {
+        C[i] = 0.f;
+    }
+
+    float *Ad, *Bd, *Cd;
+    // 2D blocks of threads
+    dim3 block_size(TILE_SIZE, TILE_SIZE);
+    // 2D grid of blocks
+    dim3 grid_size(CEIL_DIV(N, block_size.x), CEIL_DIV(M, block_size.y));
+
+    cudaEvent_t start, stop;
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
+    float ms = 0.0f;
+
+    cudaEventRecord(start);
+    CUDA_CHECK(cudaMalloc(&Ad, a_size * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&Bd, b_size * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&Cd, c_size * sizeof(float)));
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&ms, start, stop);
+    printf(">> GPU allocation time: %f ms\n", ms);
+
+    cudaEventRecord(start);
+    CUDA_CHECK(cudaMemcpy(Ad, A, a_size * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(Bd, B, b_size * sizeof(float), cudaMemcpyHostToDevice));
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&ms, start, stop);
+    printf(">> Host to device transfer time: %f ms\n", ms);
+
+    cudaEventRecord(start);
+    tiled_gemm_kernel<<<grid_size, block_size>>>(Ad, Bd, Cd, M, N, K);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&ms, start, stop);
+    printf(">> Kernel execution time: %f ms\n", ms);
+
+    cudaEventRecord(start);
+    CUDA_CHECK(cudaMemcpy(C, Cd, c_size * sizeof(float), cudaMemcpyDeviceToHost));
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&ms, start, stop);
+    printf(">> Device to host transfer time: %f ms\n", ms);
+
+    printf("\n>> Running GEMM on CPU...\n");
+    clock_t ts = clock();
+    gemm_cpu_naive(A, B, C_cpu, M, N, K);
+    clock_t te = clock();
+    printf(">> Done\n");
+
+    float elapsed_time = (te - ts) * 1000 / CLOCKS_PER_SEC;
+    printf("Elapsed time: %.6f ms\n", elapsed_time);
+
+    // check if results match within an error tolerance (eps)
+    bool match = true;
+    float eps = 0.0001;
+    for (int i = 0; i < c_size; i++) {
+        if (fabs(C_cpu[i] - C[i]) > eps) {
+            match = false;
+            break;
+        }
+    }
+    printf("\n>> Results match for CPU and GPU? ");
+    printf("%s\n", match ? "true" : "false");
 }
