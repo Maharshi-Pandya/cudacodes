@@ -6,3 +6,5 @@ This repository contains my learnings and programs related to CUDA in C/C++ in n
 ### Non-exhaustive list of codes
 
 - **softmax**: Contains the kernels for naive, online, and optimized softmax operation.
+- **matmul**: Contains the kernels for tiled matrix multiplication for 2D matrices.
+- **query-device**: Contains the code for querying the device (GPU) properties.

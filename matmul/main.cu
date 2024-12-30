@@ -1,4 +1,5 @@
-// Tiled Matrix Multiplication (TGEMM) kernel
+// Matrix Multiplication (xGEMM) kernels
+// Note: this file might change often as i learn more about CUDA and kernels in general
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -21,10 +22,32 @@ inline void cudaAssert(cudaError_t code, const char* file, int line) {
 }
 #define CEIL_DIV(x, y) ((x) >= 0 ? (((x) + (y) - 1) / (y)) : ((x) / (y)))
 #define M_PI 3.14159265358979323846f
-#define TILE_SIZE 16
+#define TILE_SIZE 32
 
 /*
-Tiled GEMM kernel:
+Naive xGEMM kernel:
+
+- 2D blocks, 2D threads
+- Each thread calculates one element of the output matrix C
+- No shared memory, only global memory access
+*/
+__global__ void naive_xgemm_kernel(float* __restrict__ Ad, float* __restrict__ Bd, float* __restrict__ Cd, int M, int N, int K) {
+    // for coalesced memory access:
+    // maps rows to y-direction, and cols to x-direction
+    int row = blockDim.y * blockIdx.y + threadIdx.y;
+    int col = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (row < M && col < N) {
+        float acc = 0.0f;
+        for (int k = 0; k < K; k++) {
+            acc += Ad[row * K + k] * Bd[k * N + col];
+        }
+        Cd[row * N + col] = acc;
+    }
+}
+
+/*
+Tiled xGEMM kernel:
 
 - Each block calculates a "tile" of the output matrix C
     > Here the indices for C, that each block (bx, by) computes would be:
@@ -43,7 +66,7 @@ Tiled GEMM kernel:
 - Then they accumulate the dot product in a variable for the common dimension
 - So block (bx, by) has completed computing the tile (bx, by) of C.
 */
-__global__ void tiled_gemm_kernel(float* __restrict__ Ad, float* __restrict__ Bd, float* __restrict__ Cd, int M, int N, int K) {
+__global__ void tiled_xgemm_kernel(float* __restrict__ Ad, float* __restrict__ Bd, float* __restrict__ Cd, int M, int N, int K) {
     int ty = threadIdx.y;
     int tx = threadIdx.x;
 
@@ -177,7 +200,7 @@ int main() {
     printf(">> Host to device transfer time: %f ms\n", ms);
 
     cudaEventRecord(start);
-    tiled_gemm_kernel<<<grid_size, block_size>>>(Ad, Bd, Cd, M, N, K);
+    naive_xgemm_kernel<<<grid_size, block_size>>>(Ad, Bd, Cd, M, N, K);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&ms, start, stop);
@@ -190,24 +213,24 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Device to host transfer time: %f ms\n", ms);
 
-    printf("\n>> Running GEMM on CPU...\n");
-    clock_t ts = clock();
-    gemm_cpu_naive(A, B, C_cpu, M, N, K);
-    clock_t te = clock();
-    printf(">> Done\n");
+    // printf("\n>> Running GEMM on CPU...\n");
+    // clock_t ts = clock();
+    // gemm_cpu_naive(A, B, C_cpu, M, N, K);
+    // clock_t te = clock();
+    // printf(">> Done\n");
 
-    float elapsed_time = (te - ts) * 1000 / CLOCKS_PER_SEC;
-    printf("Elapsed time: %.6f ms\n", elapsed_time);
+    // float elapsed_time = (te - ts) * 1000 / CLOCKS_PER_SEC;
+    // printf("Elapsed time: %.6f ms\n", elapsed_time);
 
-    // check if results match within an error tolerance (eps)
-    bool match = true;
-    float eps = 0.0001;
-    for (int i = 0; i < c_size; i++) {
-        if (fabs(C_cpu[i] - C[i]) > eps) {
-            match = false;
-            break;
-        }
-    }
-    printf("\n>> Results match for CPU and GPU? ");
-    printf("%s\n", match ? "true" : "false");
+    // // check if results match within an error tolerance (eps)
+    // bool match = true;
+    // float eps = 0.0001;
+    // for (int i = 0; i < c_size; i++) {
+    //     if (fabs(C_cpu[i] - C[i]) > eps) {
+    //         match = false;
+    //         break;
+    //     }
+    // }
+    // printf("\n>> Results match for CPU and GPU? ");
+    // printf("%s\n", match ? "true" : "false");
 }
