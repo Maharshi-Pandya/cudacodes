@@ -3,7 +3,8 @@
 #include <stdio.h>
 
 #include "cuda_utils.cuh"
-#include "naive.cuh"
+#include "naive_0.cuh"
+#include "online_1.cuh"
 
 #define M_PI 3.14159265f
 
@@ -57,7 +58,7 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Host to device transfer time: %f ms\n", ms);
 
-    run_kernel_0(matd, resd, M, N);
+    run_kernel_1(matd, resd, M, N);
 
     cudaEventRecord(start);
     CUDA_CHECK(cudaMemcpy(res, resd, totalsize, cudaMemcpyDeviceToHost));

@@ -1,5 +1,6 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <stdio.h>
 
 #include "cuda_utils.cuh"
 
@@ -37,6 +38,9 @@ __global__ void softmax_kernel_0(float* __restrict__ matd, float* __restrict__ r
     }
 }
 
+/*
+Runs the naive softmax kernel: `id = 0`
+*/
 void run_kernel_0(float* __restrict__ matd, float* __restrict__ resd, int M, int N) {
     // grid size and block size for this kernel
     // change as necessary
