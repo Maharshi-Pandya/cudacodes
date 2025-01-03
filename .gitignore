@@ -1,3 +1,4 @@
 *.exe
 *.exp
 *.lib
+*/build/*

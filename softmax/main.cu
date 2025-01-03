@@ -26,7 +26,7 @@ The softmax operation is performed on the last dimension of the matrix.
 How this works:
 One thread processes one entire row, and thus this kernel will be the slowest
 since we aren't exploiting parallelism capabilities of GPUs that much.
-We are only parallelizing over the rows (one block processes one row).
+We are only parallelizing over the rows.
 */
 __global__ void naive_softmax_kernel(float* xd, float* resd, int M, int N) {
     int row = blockDim.x * blockIdx.x + threadIdx.x;
@@ -60,7 +60,7 @@ The softmax operation is performed on the last dimension of the matrix.
 How this works:
 One thread processes one entire row, but instead of 3 passes we do only 2 passes.
 This is possible due to the property of exponentials.
-We are parallelizing over the rows (one block processes one row).
+We are parallelizing over the rows.
 */
 __global__ void online_softmax_kernel(float* xd, float* resd, int M, int N) {
     int row = blockDim.x * blockIdx.x + threadIdx.x;
