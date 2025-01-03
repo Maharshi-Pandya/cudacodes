@@ -1,6 +1,7 @@
 // Matrix Multiplication (xGEMM) kernels
 // Note: this file might change often as i learn more about CUDA and kernels in general
 
+#include <assert.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <math.h>
@@ -23,6 +24,11 @@ inline void cudaAssert(cudaError_t code, const char* file, int line) {
 #define CEIL_DIV(x, y) ((x) >= 0 ? (((x) + (y) - 1) / (y)) : ((x) / (y)))
 #define M_PI 3.14159265358979323846f
 #define TILE_SIZE 32
+
+#define BM 64
+#define BK 8
+#define BN 64
+#define COARSE_FACTOR 8
 
 /*
 Naive xGEMM kernel:
@@ -91,7 +97,7 @@ __global__ void tiled_xgemm_kernel(float* __restrict__ Ad, float* __restrict__ B
         // out of bounds check
         // same row, different column for A
         if (row < M && (offset + tx) < K)
-            a_smem[ty][tx] = Ad[row * M + offset + tx];
+            a_smem[ty][tx] = Ad[row * K + offset + tx];
         else
             a_smem[ty][tx] = 0.f;
 
@@ -112,6 +118,63 @@ __global__ void tiled_xgemm_kernel(float* __restrict__ Ad, float* __restrict__ B
     // write the final output after looping over all tiles
     if (row < M && col < N) {
         Cd[row * N + col] = acc;
+    }
+}
+
+/*
+Tiled xGEMM kernel with + 1D blocktiling
+
+- Each thread calculates more than one element (one column of output matrix C)
+- Tiles of A has shape (BM, BK) and tile of B has shape (BK, BN)
+- Threads process COARSE_FACTOR rows at a time
+*/
+__global__ void tiled_xgemm_1d_coalesce_kernel(float* __restrict__ Ad, float* __restrict__ Bd, float* __restrict__ Cd, int M, int N, int K) {
+    int by = blockIdx.y;
+    int bx = blockIdx.x;
+
+    // for within each tile + for loading B's tile
+    int ty = threadIdx.x / BN;
+    int tx = threadIdx.x % BN;
+
+    // for loading A's tile
+    int aty = threadIdx.x / BK;
+    int atx = threadIdx.x % BK;
+
+    // working on C[row, col]
+    int row = by * BM + (ty * COARSE_FACTOR);
+    int col = bx * BN + tx;
+
+    // shared memory for A and B for computing tiles
+    __shared__ float a_smem[BM * BK];
+    __shared__ float b_smem[BK * BN];
+
+    float acc[COARSE_FACTOR] = {0.f};
+
+    for (int tile = 0; tile < K; tile += BK) {
+        // load tiles into shared memory for both A and B
+        if ((by * BM + aty) < M && (tile + atx) < K)
+            a_smem[aty * BK + atx] = Ad[(by * BM + aty) * K + (tile + atx)];
+        else
+            a_smem[aty * BK + atx] = 0.f;
+        if ((tile + ty) < K && (bx * BN + tx) < N)
+            b_smem[ty * BN + tx] = Bd[(tile + ty) * N + (bx * BN + tx)];
+        else
+            b_smem[ty * BN + tx] = 0.f;
+        __syncthreads();
+
+        // inner loop:
+        // each thread computes 8 elements
+        for (int k = 0; k < BK; k++) {
+            float b_reg = b_smem[k * BN + tx];
+            for (int c = 0; c < COARSE_FACTOR; c++)
+                acc[c] += a_smem[(ty * COARSE_FACTOR + c) * BK + k] * b_reg;
+        }
+        __syncthreads();
+    }
+
+    for (int c = 0; c < COARSE_FACTOR; c++) {
+        if ((row + c) < M && col < N)
+            Cd[(row + c) * N + col] = acc[c];
     }
 }
 
@@ -143,9 +206,9 @@ float random_normal_clamped(float min, float max) {
 }
 
 int main() {
-    int M = 4096;
-    int N = 4096;
-    int K = 4096;
+    int M = 1024;
+    int N = 1024;
+    int K = 1024;
 
     int a_size = M * K;
     int b_size = K * N;
@@ -172,10 +235,13 @@ int main() {
     }
 
     float *Ad, *Bd, *Cd;
-    // 2D blocks of threads
-    dim3 block_size(TILE_SIZE, TILE_SIZE);
-    // 2D grid of blocks
-    dim3 grid_size(CEIL_DIV(N, block_size.x), CEIL_DIV(M, block_size.y));
+
+    // uncomment the below lines for tiled_xgemm without coalesce
+    // dim3 block_size(TILE_SIZE, TILE_SIZE);
+    // dim3 grid_size(CEIL_DIV(N, block_size.x), CEIL_DIV(M, block_size.y));
+
+    dim3 block_size(BM * BN / COARSE_FACTOR);
+    dim3 grid_size(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
 
     cudaEvent_t start, stop;
     CUDA_CHECK(cudaEventCreate(&start));
@@ -200,7 +266,7 @@ int main() {
     printf(">> Host to device transfer time: %f ms\n", ms);
 
     cudaEventRecord(start);
-    naive_xgemm_kernel<<<grid_size, block_size>>>(Ad, Bd, Cd, M, N, K);
+    tiled_xgemm_1d_coalesce_kernel<<<grid_size, block_size>>>(Ad, Bd, Cd, M, N, K);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&ms, start, stop);
@@ -213,24 +279,24 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Device to host transfer time: %f ms\n", ms);
 
-    // printf("\n>> Running GEMM on CPU...\n");
-    // clock_t ts = clock();
-    // gemm_cpu_naive(A, B, C_cpu, M, N, K);
-    // clock_t te = clock();
-    // printf(">> Done\n");
+    printf("\n>> Running GEMM on CPU...\n");
+    clock_t ts = clock();
+    gemm_cpu_naive(A, B, C_cpu, M, N, K);
+    clock_t te = clock();
+    printf(">> Done\n");
 
-    // float elapsed_time = (te - ts) * 1000 / CLOCKS_PER_SEC;
-    // printf("Elapsed time: %.6f ms\n", elapsed_time);
+    float elapsed_time = (te - ts) * 1000 / CLOCKS_PER_SEC;
+    printf("Elapsed time: %.6f ms\n", elapsed_time);
 
-    // // check if results match within an error tolerance (eps)
-    // bool match = true;
-    // float eps = 0.0001;
-    // for (int i = 0; i < c_size; i++) {
-    //     if (fabs(C_cpu[i] - C[i]) > eps) {
-    //         match = false;
-    //         break;
-    //     }
-    // }
-    // printf("\n>> Results match for CPU and GPU? ");
-    // printf("%s\n", match ? "true" : "false");
+    // check if results match within an error tolerance (eps)
+    bool match = true;
+    float eps = 0.0001;
+    for (int i = 0; i < c_size; i++) {
+        if (fabs(C_cpu[i] - C[i]) > eps) {
+            match = false;
+            break;
+        }
+    }
+    printf("\n>> Results match for CPU and GPU? ");
+    printf("%s\n", match ? "true" : "false");
 }
