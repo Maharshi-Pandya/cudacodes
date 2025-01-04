@@ -2,3 +2,4 @@
 *.exp
 *.lib
 */build/*
+__pycache__
