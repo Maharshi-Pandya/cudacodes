@@ -12,11 +12,9 @@ Let's start.
 
 Before getting into it all, let's take a moment to understand the math behind the softmax operation. Softmax for an input vector $\textbf{X}$ having $N$ elements, produces an output vector $\textbf{O}$ with $N$ elements, where the $i^{th}$ element in the output vector is defined as:
 
-$$
-
+```math
 \textbf{O}_i = \frac{e^{x_i}}{\Sigma_{k = 0}^{N}{e^{x_k}}}
-
-$$
+```
 
 Note that softmax operation depends on the current element $x_i$ and also on the **sum** of exponentials of all the elements of the input vector $X$. We will call this sum as the "normalization factor" (or, norm) henceforth.
 
