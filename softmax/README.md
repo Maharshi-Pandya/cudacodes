@@ -10,10 +10,12 @@ Let's start.
 
 ## The math
 
-Before getting into it all, let's take a moment to understand the math behind the softmax operation. Softmax for an input vector $\bold{X}$ having $N$ elements, produces an output vector $\bold{O}$ with $N$ elements, where the $i^{th}$ element in the output vector is defined as:
+Before getting into it all, let's take a moment to understand the math behind the softmax operation. Softmax for an input vector $\textbf{X}$ having $N$ elements, produces an output vector $\textbf{O}$ with $N$ elements, where the $i^{th}$ element in the output vector is defined as:
 
 $$
-\bold{O}_i = \frac{e^{x_i}}{\Sigma_{k = 0}^{N}{e^{x_k}}}
+
+\textbf{O}_i = \frac{e^{x_i}}{\Sigma_{k = 0}^{N}{e^{x_k}}}
+
 $$
 
 Note that softmax operation depends on the current element $x_i$ and also on the **sum** of exponentials of all the elements of the input vector $X$. We will call this sum as the "normalization factor" (or, norm) henceforth.
@@ -49,7 +51,7 @@ If the values of $x_i$ are very large (or very small), then the exponentials mig
 But... there is a fix! We can modify the above equation in such a way that the overall operation becomes numerically stable while being correct: We subtract the maximum value $x_{max}$ of the vector (a constant) from each $x_i$ before computing the exponential. This subtraction operation "shifts" the numbers to a range that can work nicely with floating point numbers. The numerically stable softmax equation becomes:
 
 $$
-\bold{O}_i = \frac{e^{(x_i - x_{max})}}{\Sigma_{k = 0}^{N}{e^{(x_k - x_{max})}}}
+\textbf{O}_i = \frac{e^{(x_i - x_{max})}}{\Sigma_{k = 0}^{N}{e^{(x_k - x_{max})}}}
 $$
 
 How this "shifted" equation results in the correct softmax output is left as an excersice to the reader :)
@@ -104,7 +106,7 @@ In this kernel, we will assume that each thread in a block processes and compute
 
 The figure below shows this. Note that `row = blockDim.x * blockIdx.x + threadIdx.x` is the row which each thread within some block will process.
 
-![Naive threads mapping](./media/naive_thread_mapping.png)
+![Naive threads mapping](https://raw.githubusercontent.com/Maharshi-Pandya/cudacodes/refs/heads/master/softmax/media/naive_thread_mapping.png)
 
 The actual computation is quite intuitive here. Softmax is calculated in three passes over the input array:
 
@@ -207,19 +209,25 @@ Finally at $i = 3$:
 After the final iteration, we remain with:
 
 $$
+
 x_{max} = max_3 = 5
+
 $$
 
 and,
 
 $$
+
 norm = norm_3 = e^{(3 - 5)} + e^{(2 - 5)} + e^{(5 - 5)} + e^{(1 - 5)}
+
 $$
 
 We just calculated both maximum and norm factor in only one pass by using a correction term and by exploiting the property of multiplying exponentials! The correction term is:
 
 $$
+
 term = e^{(max_{i-1} - max_i)}
+
 $$
 
 Now, to write this algorithm as a CUDA kernel, we simply use the naive kernel and "fuse" the first two loops into one:
@@ -277,7 +285,7 @@ The kernels above uses only global GPU memory. Reading from and writing to globa
 
 The idea here is to have each block (thread block) process one row of the input matrix and the threads within each block will process only a chunk of the entire row. Have a look at the figure below to understand which elements will each thread load.
 
-![Threads chunk loading](./media/threads_collab_load.png)
+![Threads chunk loading](https://raw.githubusercontent.com/Maharshi-Pandya/cudacodes/refs/heads/master/softmax/media/threads_collab_load.png)
 
 Here `tid = threadIdx.x` loads elements spaced by `blockDim.x` so that the threads with different `tid`s load consecutive elements from the input row. This helps in achieving **memory coalescing** where accessing consecutive addresses from the global memory is faster than accessing random addresses.
 
@@ -289,7 +297,7 @@ Let's assume each thread has its own private set of variables called `local_max`
 
 After all the threads in a block complete processing their respective chunks, we will be left with `N_THREADS` values for `local_max` and `local_norm`. To calculate the global maximum value, we need to "reduce" these `N_THREADS` local maximum values to $1$ global maximum value. The figure below will help you understand this.
 
-![Max reduction](./media/max_reduction.png)
+![Max reduction](https://raw.githubusercontent.com/Maharshi-Pandya/cudacodes/refs/heads/master/softmax/media/max_reduction.png)
 
 
 However, to perform this "block-level" reduction we will need to store the local maximum value in the shared memory of the block. Each thread will store its local maximum as:
