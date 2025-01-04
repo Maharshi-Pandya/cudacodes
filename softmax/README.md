@@ -12,7 +12,9 @@ Let's start.
 
 Before getting into it all, let's take a moment to understand the math behind the softmax operation. Softmax for an input vector $\textbf{X}$ having $N$ elements, produces an output vector $\textbf{O}$ with $N$ elements, where the $i^{th}$ element in the output vector is defined as:
 
-$$\textbf{O}_i = \frac{e^{x_i}}{\Sigma_{k = 0}^{N}{e^{x_k}}}$$
+```math
+\textbf{O}_i = \frac{e^{x_i}}{\Sigma_{k = 0}^{N}{e^{x_k}}}
+```
 
 Note that softmax operation depends on the current element $x_i$ and also on the **sum** of exponentials of all the elements of the input vector $X$. We will call this sum as the "normalization factor" (or, norm) henceforth.
 
@@ -46,9 +48,9 @@ If the values of $x_i$ are very large (or very small), then the exponentials mig
 
 But... there is a fix! We can modify the above equation in such a way that the overall operation becomes numerically stable while being correct: We subtract the maximum value $x_{max}$ of the vector (a constant) from each $x_i$ before computing the exponential. This subtraction operation "shifts" the numbers to a range that can work nicely with floating point numbers. The numerically stable softmax equation becomes:
 
-$$
+```math
 \textbf{O}_i = \frac{e^{(x_i - x_{max})}}{\Sigma_{k = 0}^{N}{e^{(x_k - x_{max})}}}
-$$
+```
 
 How this "shifted" equation results in the correct softmax output is left as an excersice to the reader :)
 
@@ -204,27 +206,21 @@ Finally at $i = 3$:
 
 After the final iteration, we remain with:
 
-$$
-
+```math
 x_{max} = max_3 = 5
-
-$$
+```
 
 and,
 
-$$
-
+```math
 norm = norm_3 = e^{(3 - 5)} + e^{(2 - 5)} + e^{(5 - 5)} + e^{(1 - 5)}
-
-$$
+```
 
 We just calculated both maximum and norm factor in only one pass by using a correction term and by exploiting the property of multiplying exponentials! The correction term is:
 
-$$
-
+```math
 term = e^{(max_{i-1} - max_i)}
-
-$$
+```
 
 Now, to write this algorithm as a CUDA kernel, we simply use the naive kernel and "fuse" the first two loops into one:
 
