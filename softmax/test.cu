@@ -73,10 +73,10 @@ int main() {
     // the output should be 1.0 (or a number very close to it)
     // TODO: add full correctness check
     float sum = 0.f;
-    for (int i = 0; i < N; i++) {
+    for (int i = N; i < 2 * N; i++) {
         sum += res[i];
     }
-    printf("\nSum of the 1st row of softmax result: %f\n", sum);
+    printf("\nSum of the 2nd row of softmax result: %f\n", sum);
 
     free(mat);
     free(res);

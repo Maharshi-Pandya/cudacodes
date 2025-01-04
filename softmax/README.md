@@ -434,13 +434,13 @@ __syncthreads();
 The output from this kernel looks like:
 
 ```
->> GPU allocation time: 10.581920 ms
->> Host to device transfer time: 27.374529 ms
->> Kernel execution time: 0.169568 ms
->> Device to host transfer time: 43.043007 ms
+>> GPU allocation time: 10.464928 ms
+>> Host to device transfer time: 22.674080 ms
+>> Kernel execution time: 6.612160 ms
+>> Device to host transfer time: 41.318016 ms
 ```
 
-Right away we see that this kernel which uses shared memory and reductions is whopping **99.81% (521.66 times) faster than the previous kernel** and it is already around **97.65% (42.6 times) faster than PyTorch's implementation**!
+Right away we see that this kernel which uses shared memory and reductions is already around **8.33% (1.09 times) faster than PyTorch's implementation**.
 
 Can we improve this even more? Let's see.
 
@@ -620,18 +620,18 @@ __syncthreads();
 and the kernel outputs:
 
 ```
->> GPU allocation time: 10.405888 ms
->> Host to device transfer time: 24.052832 ms
->> Kernel execution time: 0.137536 ms
->> Device to host transfer time: 35.820992 ms
+>> GPU allocation time: 10.542080 ms
+>> Host to device transfer time: 25.580065 ms
+>> Kernel execution time: 5.174400 ms
+>> Device to host transfer time: 45.923008 ms
 ```
 
-This kernel is around $1.23$ times (or, $18.93$%) faster than the shared memory kernel! Using shuffle instructions eliminated the need of using sync barriers `__syncthreads` in each iteration as well.
+This kernel is around $1.29$ times (or, $22.73$%) faster than the shared memory kernel! Using shuffle instructions eliminated the need of using sync barriers `__syncthreads` in each iteration as well.
 
 
 ## Conclusion
 
-In this worklog, we iteratively optimized the softmax operation starting from PyTorch and then writing a custom CUDA kernel for the same. With the above improvements, our custom softmax CUDA kernel became around $52.55$ times (or, $98.1$%) faster than PyTorch on RTX 1050Ti.
+In this worklog, we iteratively optimized the softmax operation starting from PyTorch and then writing a custom CUDA kernel for the same. With the above improvements, our custom softmax CUDA kernel became around $1.41$ times (or, $29.17$%) faster than PyTorch on RTX 1050Ti.
 
 - The full code is available on my GitHub: [Optimizing softmax in CUDA](https://github.com/Maharshi-Pandya/cudacodes/tree/master/softmax)
 - Follow me on X (formerly twitter) for real time updates about ML, CUDA, and my life in general: [Twitter profile](https://x.com/mrsiipa)

@@ -91,7 +91,7 @@ void run_kernel_2(float* __restrict__ matd, float* __restrict__ resd, int M, int
     // grid size and block size for this kernel
     // change as necessary
     dim3 block_size(1024);
-    dim3 grid_size(CEIL_DIV(M, block_size.x));
+    dim3 grid_size(M);
 
     cudaEvent_t start, stop;
     CUDA_CHECK(cudaEventCreate(&start));
