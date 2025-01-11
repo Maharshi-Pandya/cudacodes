@@ -128,7 +128,7 @@ Tiled xGEMM kernel with + 1D blocktiling
 - Tiles of A has shape (BM, BK) and tile of B has shape (BK, BN)
 - Threads process COARSE_FACTOR rows at a time
 */
-__global__ void tiled_xgemm_1d_coalesce_kernel(float* __restrict__ Ad, float* __restrict__ Bd, float* __restrict__ Cd, int M, int N, int K) {
+__global__ void tiled_xgemm_1d_coarse_kernel(float* __restrict__ Ad, float* __restrict__ Bd, float* __restrict__ Cd, int M, int N, int K) {
     int by = blockIdx.y;
     int bx = blockIdx.x;
 
@@ -266,7 +266,7 @@ int main() {
     printf(">> Host to device transfer time: %f ms\n", ms);
 
     cudaEventRecord(start);
-    tiled_xgemm_1d_coalesce_kernel<<<grid_size, block_size>>>(Ad, Bd, Cd, M, N, K);
+    tiled_xgemm_1d_coarse_kernel<<<grid_size, block_size>>>(Ad, Bd, Cd, M, N, K);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&ms, start, stop);
