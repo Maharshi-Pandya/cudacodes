@@ -3,6 +3,8 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 
+#include "coalesced_warp_2.cuh"
+#include "coalesced_warpblock_3.cuh"
 #include "cublas_0.cuh"
 #include "naive_1.cuh"
 #include "utils.cuh"
@@ -55,7 +57,7 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Host to device transfer time: %f ms\n", ms);
 
-    run_kernel_cublas_sgemv(matd, vecd, resd, M, N);
+    run_kernel_coalesced_warpblock_sgmev(matd, vecd, resd, M, N);
 
     // copy device to host
     cudaEventRecord(start);

@@ -28,6 +28,7 @@ void run_kernel_cublas_sgemv(float* __restrict__ matd, float* __restrict__ vecd,
     cudaEventElapsedTime(&ms, start, stop);
     printf("------- cuBLAS sgmev kernel ---------\n");
     print_kernel_essentials(M, N, ms);
+    printf("---------------------------\n");
 
     cublasDestroy(handle);
     CUDA_CHECK(cudaEventDestroy(start));

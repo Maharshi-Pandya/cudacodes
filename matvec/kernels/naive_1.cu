@@ -44,6 +44,7 @@ void run_kernel_naive_sgemv(float* __restrict__ matd, float* __restrict__ vecd, 
     CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
     printf("------- Naive sgmev kernel ---------\n");
     print_kernel_essentials(M, N, ms);
+    printf("---------------------------\n");
 
     CUDA_CHECK(cudaEventDestroy(start));
     CUDA_CHECK(cudaEventDestroy(stop));

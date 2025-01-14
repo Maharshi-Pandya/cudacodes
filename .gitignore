@@ -3,3 +3,4 @@
 *.lib
 */build/*
 __pycache__
+scratchpad.md

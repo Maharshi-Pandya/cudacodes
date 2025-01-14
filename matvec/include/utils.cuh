@@ -32,4 +32,45 @@ float compute_peak_memory_bandwidth(int M, int N, float ms);
 
 void print_kernel_essentials(int M, int N, float ms);
 
+/*
+Reduction functions on device. These will be inline:
+The compiler will replace the call with the code instead of calling the function (overhead)
+*/
+/*
+Utility warp level sum reduction with shuffle instructions
+*/
+
+__device__ __forceinline__ float warpReduceSum(float val) {
+    for (int offset = warpSize / 2; offset > 0; offset /= 2) {
+        val += __shfl_down_sync(0xffffffff, val, offset);
+    }
+
+    return val;
+}
+
+__device__ __forceinline__ void blockReduceSum(float val, float *smem, int tid, int blockDimX) {
+    // 1. do warpReduce sum
+    val = warpReduceSum(val);
+
+    // 2. do blockReduce sum
+    if (blockDimX > warpSize) {
+        int lane = tid % warpSize;
+        int wid = tid / warpSize;
+        if (lane == 0) {
+            smem[wid] = val;
+        }
+        __syncthreads();
+
+        if (tid < warpSize) {
+            val = tid < CEIL_DIV(blockDimX, warpSize) ? smem[tid] : 0.0f;
+            val = warpReduceSum(val);
+            if (tid == 0) smem[0] = val;
+        }
+    } else {
+        if (tid == 0) smem[0] = val;
+    }
+    // __syncthreads();
+    // sync not needed because only thread 0 reads from smem[0]
+}
+
 #endif  // CUDA_UTILS_CUH
