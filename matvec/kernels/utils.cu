@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "utils.cuh"
 
 /*
@@ -31,4 +33,14 @@ float compute_peak_memory_bandwidth(int M, int N, float ms) {
     float gbPerSec = (totalBytes / secs) / 1.0e9;
 
     return (gbPerSec / THEORETICAL_MAX_MEMORY_BANDWIDTH) * 100;
+}
+
+void print_kernel_essentials(int M, int N, float ms) {
+    float gflops = compute_gflops(M, N, ms);
+    printf(">> Execution time: %f ms\n", ms);
+    printf(">> Achieved (GFLOPS): %f\n", gflops);
+    printf(">> Theoretical max (GFLOPS): %f\n", THEORETICAL_MAX_GFLOPS);
+    printf(">> Maximum memory bandwidth: %f GB/s\n", THEORETICAL_MAX_MEMORY_BANDWIDTH);
+    printf(">> Achieves %f %% of peak GFLOPS\n", compute_peak_gflops(gflops));
+    printf(">> Achieves %f %% of peak Memory Bandwidth\n", compute_peak_memory_bandwidth(M, N, ms));
 }

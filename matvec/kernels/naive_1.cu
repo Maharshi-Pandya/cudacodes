@@ -11,6 +11,7 @@ Naive Sgemv kernel
 - Each thread calculates one element of the output vector
 - The row index is calculated using block index and thread index
 - Uses linearized indexing
+- Memory accesses are not coalesced
 */
 __global__ void naive_sgemv_kernel(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
     int row = blockDim.x * blockIdx.x + threadIdx.x;
@@ -41,13 +42,8 @@ void run_kernel_naive_sgemv(float* __restrict__ matd, float* __restrict__ vecd, 
     CUDA_CHECK(cudaEventRecord(stop));
     CUDA_CHECK(cudaEventSynchronize(stop));
     CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
-    float gflops = compute_gflops(M, N, ms);
-    printf(">> Naive sgemv execution time: %f ms\n", ms);
-    printf(">> Naive sgemv (GFLOPS): %f\n", gflops);
-    printf(">> Theoretical max (GFLOPS): %f\n", THEORETICAL_MAX_GFLOPS);
-    printf(">> Maximum memory bandwidth: %f GB/s\n", THEORETICAL_MAX_MEMORY_BANDWIDTH);
-    printf(">> Naive sgemv achieves %f %% of peak GFLOPS\n", compute_peak_gflops(gflops));
-    printf(">> Naive sgemv achieves %f %% of peak Memory Bandwidth\n", compute_peak_memory_bandwidth(M, N, ms));
+    printf("------- Naive sgmev kernel ---------\n");
+    print_kernel_essentials(M, N, ms);
 
     CUDA_CHECK(cudaEventDestroy(start));
     CUDA_CHECK(cudaEventDestroy(stop));

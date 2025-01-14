@@ -30,4 +30,6 @@ float compute_peak_gflops(float gflops);
 
 float compute_peak_memory_bandwidth(int M, int N, float ms);
 
+void print_kernel_essentials(int M, int N, float ms);
+
 #endif  // CUDA_UTILS_CUH
