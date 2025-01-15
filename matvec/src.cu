@@ -8,6 +8,7 @@
 #include "cublas_0.cuh"
 #include "naive_1.cuh"
 #include "utils.cuh"
+#include "vectorized_4.cuh"
 
 int main() {
     int M = 4096;
@@ -57,7 +58,7 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Host to device transfer time: %f ms\n", ms);
 
-    run_kernel_coalesced_warpblock_sgmev(matd, vecd, resd, M, N);
+    run_kernel_vectorized_sgmev(matd, vecd, resd, M, N);
 
     // copy device to host
     cudaEventRecord(start);

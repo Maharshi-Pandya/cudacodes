@@ -6,24 +6,41 @@
 #include "utils.cuh"
 
 /*
-Coalesced Warp Block Sgemv kernel
+Vectorized Sgemv kernel
 
 - Each block is assigned to a row of the matrix A
 - Each block calculates one output element of y
 - The columns are accessed in coalesced manner by threads
+- Vectorized loads are done for efficient memory bandwidth
 - Performs warp level + block level sum reduction
 */
-__global__ void coalesced_warpblock_sgmev_kernel(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
+__global__ void vectorized_sgemv_kernel(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
     extern __shared__ float smem[];
 
     int bid = blockIdx.x;
     if (bid >= M) return;
 
     int tid = threadIdx.x;
+    int n_float4s = N / 4;
+
+    // cast the matrix and vector as float4
+    // float4 holds multiple values (x, y, z, w)
+    float4* mat_row = reinterpret_cast<float4*>(&matd[bid * N]);
+    float4* vec = reinterpret_cast<float4*>(vecd);
+
     // each thread calculates its own partial output
     float partial_sum = 0.f;
-    for (int col = tid; col < N; col += blockDim.x) {
-        partial_sum += matd[bid * N + col] * vecd[col];
+
+// manual loop unrolling with a factor of 4
+#pragma unroll 4
+    for (int col = tid; col < n_float4s; col += blockDim.x) {
+        float4 matval = mat_row[col];
+        float4 vecval = vec[col];
+
+        partial_sum += (matval.x * vecval.x +
+                        matval.y * vecval.y +
+                        matval.z * vecval.z +
+                        matval.w * vecval.w);
     }
 
     // block level sum reduction
@@ -37,9 +54,9 @@ __global__ void coalesced_warpblock_sgmev_kernel(float* __restrict__ matd, float
 }
 
 /*
-Runs the coalesced warp sgemv kernel.
+Runs the vectorized sgemv kernel.
 */
-void run_kernel_coalesced_warpblock_sgmev(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
+void run_kernel_vectorized_sgmev(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
     int NUM_THREADS = 64;
     int warp_size = 32;
 
@@ -53,11 +70,11 @@ void run_kernel_coalesced_warpblock_sgmev(float* __restrict__ matd, float* __res
     float ms = 0.f;
 
     CUDA_CHECK(cudaEventRecord(start));
-    coalesced_warpblock_sgmev_kernel<<<grid_size, block_size, shared_mem_size>>>(matd, vecd, resd, M, N);
+    vectorized_sgemv_kernel<<<grid_size, block_size, shared_mem_size>>>(matd, vecd, resd, M, N);
     CUDA_CHECK(cudaEventRecord(stop));
     CUDA_CHECK(cudaEventSynchronize(stop));
     CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
-    printf("------- Coalesced warp-block sgmev kernel ---------\n");
+    printf("------- Vectorized sgmev kernel ---------\n");
     print_kernel_essentials(M, N, ms);
     printf("---------------------------\n");
 
