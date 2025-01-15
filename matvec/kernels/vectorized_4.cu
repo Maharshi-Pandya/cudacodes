@@ -25,7 +25,7 @@ __global__ void vectorized_sgemv_kernel(float* __restrict__ matd, float* __restr
 
     // cast the matrix and vector as float4
     // float4 holds multiple values (x, y, z, w)
-    float4* mat_row = reinterpret_cast<float4*>(&matd[bid * N]);
+    float4* mat_row = reinterpret_cast<float4*>(matd + bid * N);
     float4* vec = reinterpret_cast<float4*>(vecd);
 
     // each thread calculates its own partial output
