@@ -19,18 +19,16 @@ inline void cudaAssert(cudaError_t code, const char *file, int line) {
 }
 #define CEIL_DIV(x, y) ((x) >= 0 ? (((x) + (y) - 1) / (y)) : ((x) / (y)))
 #define M_PI 3.14159265f
-#define THEORETICAL_MAX_GFLOPS 2138.0f          // GFLOPS
-#define THEORETICAL_MAX_MEMORY_BANDWIDTH 112.1  // GB per second
 
 float random_normal_clamped(float min, float max);
 
 float compute_gflops(int M, int N, float ms);
 
-float compute_peak_gflops(float gflops);
+float compute_peak_gflops(float gflops, float THEORETICAL_MAX_GFLOPS);
 
-float compute_peak_memory_bandwidth(int M, int N, float ms);
+float compute_peak_memory_bandwidth(int M, int N, float ms, float THEORETICAL_MAX_MEMORY_BANDWIDTH);
 
-void print_kernel_essentials(int M, int N, float ms);
+void print_kernel_essentials(int M, int N, float ms, float THEORETICAL_MAX_GFLOPS, float THEORETICAL_MAX_MEMORY_BANDWIDTH);
 
 /*
 Reduction functions on device. These will be inline:

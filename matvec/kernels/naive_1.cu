@@ -28,7 +28,7 @@ __global__ void naive_sgemv_kernel(float* __restrict__ matd, float* __restrict__
 /*
 Runs the naive Sgemv kernel.
 */
-void run_kernel_naive_sgemv(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
+float run_kernel_naive_sgemv(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N, float THEORETICAL_MAX_GFLOPS, float THEORETICAL_MAX_MEMORY_BANDWIDTH) {
     dim3 block_size(1024);
     dim3 grid_size(CEIL_DIV(M, block_size.x));
 
@@ -43,9 +43,11 @@ void run_kernel_naive_sgemv(float* __restrict__ matd, float* __restrict__ vecd, 
     CUDA_CHECK(cudaEventSynchronize(stop));
     CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
     printf("------- Naive sgmev kernel ---------\n");
-    print_kernel_essentials(M, N, ms);
+    print_kernel_essentials(M, N, ms, THEORETICAL_MAX_GFLOPS, THEORETICAL_MAX_MEMORY_BANDWIDTH);
     printf("---------------------------\n");
 
     CUDA_CHECK(cudaEventDestroy(start));
     CUDA_CHECK(cudaEventDestroy(stop));
+
+    return ms;
 }

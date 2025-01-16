@@ -56,7 +56,7 @@ __global__ void vectorized_sgemv_kernel(float* __restrict__ matd, float* __restr
 /*
 Runs the vectorized sgemv kernel.
 */
-void run_kernel_vectorized_sgmev(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
+float run_kernel_vectorized_sgmev(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N, float THEORETICAL_MAX_GFLOPS, float THEORETICAL_MAX_MEMORY_BANDWIDTH) {
     int NUM_THREADS = 64;
     int warp_size = 32;
 
@@ -75,9 +75,11 @@ void run_kernel_vectorized_sgmev(float* __restrict__ matd, float* __restrict__ v
     CUDA_CHECK(cudaEventSynchronize(stop));
     CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
     printf("------- Vectorized sgmev kernel ---------\n");
-    print_kernel_essentials(M, N, ms);
+    print_kernel_essentials(M, N, ms, THEORETICAL_MAX_GFLOPS, THEORETICAL_MAX_MEMORY_BANDWIDTH);
     printf("---------------------------\n");
 
     CUDA_CHECK(cudaEventDestroy(start));
     CUDA_CHECK(cudaEventDestroy(stop));
+
+    return ms;
 }

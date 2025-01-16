@@ -39,7 +39,7 @@ __global__ void coalesced_warpblock_sgmev_kernel(float* __restrict__ matd, float
 /*
 Runs the coalesced warp sgemv kernel.
 */
-void run_kernel_coalesced_warpblock_sgmev(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N) {
+float run_kernel_coalesced_warpblock_sgmev(float* __restrict__ matd, float* __restrict__ vecd, float* __restrict__ resd, int M, int N, float THEORETICAL_MAX_GFLOPS, float THEORETICAL_MAX_MEMORY_BANDWIDTH) {
     int NUM_THREADS = 64;
     int warp_size = 32;
 
@@ -58,9 +58,11 @@ void run_kernel_coalesced_warpblock_sgmev(float* __restrict__ matd, float* __res
     CUDA_CHECK(cudaEventSynchronize(stop));
     CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
     printf("------- Coalesced warp-block sgmev kernel ---------\n");
-    print_kernel_essentials(M, N, ms);
+    print_kernel_essentials(M, N, ms, THEORETICAL_MAX_GFLOPS, THEORETICAL_MAX_MEMORY_BANDWIDTH);
     printf("---------------------------\n");
 
     CUDA_CHECK(cudaEventDestroy(start));
     CUDA_CHECK(cudaEventDestroy(stop));
+
+    return ms;
 }
