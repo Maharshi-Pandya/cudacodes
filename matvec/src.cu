@@ -25,13 +25,10 @@ int main() {
     float *res = (float *)malloc(M * sizeof(float));
 
     for (size_t i = 0; i < matsize; i++) {
-        mat[i] = float(i % 10);
-        // mat[i] = random_normal_clamped(-10.f, 10.f);
+        mat[i] = random_normal_clamped(-10.f, 10.f);
         // hacky way to init the vector as well
         if (i < vecsize) {
-            vec[i] = float(i % 8);
-
-            // vec[i] = random_normal_clamped(-10.f, 10.f);
+            vec[i] = random_normal_clamped(-10.f, 10.f);
         }
     }
 
@@ -61,7 +58,7 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Host to device transfer time: %f ms\n", ms);
 
-    run_kernel_cublas_sgemv(matd, vecd, resd, M, N);
+    run_kernel_vectorized_sgmev(matd, vecd, resd, M, N);
 
     // copy device to host
     cudaEventRecord(start);
