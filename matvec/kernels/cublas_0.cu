@@ -22,7 +22,7 @@ void run_kernel_cublas_sgemv(float* __restrict__ matd, float* __restrict__ vecd,
     // Sgemv: y = (alpha * A * x) + (beta * y)
     float alpha = 1.0f, beta = 0.0f;
     cudaEventRecord(start);
-    cublasSgemv(handle, CUBLAS_OP_N, M, N, &alpha, matd, M, vecd, 1, &beta, resd, 1);
+    cublasSgemv(handle, CUBLAS_OP_T, N, M, &alpha, matd, N, vecd, 1, &beta, resd, 1);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&ms, start, stop);
