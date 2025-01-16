@@ -58,7 +58,7 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Host to device transfer time: %f ms\n", ms);
 
-    run_kernel_vectorized_sgmev(matd, vecd, resd, M, N);
+    run_kernel_cublas_sgemv(matd, vecd, resd, M, N);
 
     // copy device to host
     cudaEventRecord(start);
@@ -67,8 +67,6 @@ int main() {
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Device to host transfer time: %f ms\n", ms);
-
-    printf(">> First, middle, and last element of the result: %f, %f, %f\n", res[0], res[M / 2], res[M - 1]);
 
     // cleanup
     cudaFree(matd);
