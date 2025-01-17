@@ -15,8 +15,8 @@
 Benchmarks a kernel against cuBLAS for different sizes
 */
 void benchmark_kernel_for_sizes(int minM, int maxM, float THEORETICAL_MAX_GFLOPS, float THEORETICAL_MAX_MEMORY_BANDWIDTH) {
-    FILE *gflops_file = fopen("benchmarks/kernel_custom_vs_cublas-gflops.txt", "w");
-    FILE *memory_file = fopen("benchmarks/kernel_custom_vs_cublas-memory.txt", "w");
+    FILE *gflops_file = fopen("benchmarks/kernel_4_vs_cublas-gflops.txt", "w");
+    FILE *memory_file = fopen("benchmarks/kernel_4_vs_cublas-memory.txt", "w");
 
     if (gflops_file == NULL) {
         perror("Error opening the file for GFLOPS.\n");
@@ -117,5 +117,5 @@ int main() {
     float THEORETICAL_MAX_GFLOPS = cudaCores * clockGHz * 2;
     float THEORETICAL_MAX_MEMORY_BANDWIDTH = (2 * prop.memoryClockRate * prop.memoryBusWidth) / (8.0 * 1e6);
 
-    benchmark_kernel_for_sizes(128, 8192, THEORETICAL_MAX_GFLOPS, THEORETICAL_MAX_MEMORY_BANDWIDTH);
+    benchmark_kernel_for_sizes(4096, 4096, THEORETICAL_MAX_GFLOPS, THEORETICAL_MAX_MEMORY_BANDWIDTH);
 }
