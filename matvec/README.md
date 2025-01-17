@@ -2,9 +2,9 @@
 
 Matrix-vector multiplication is a foundational operation in linear algebra, where a matrix transforms an input vector into an output vector. This operation basically powers numerous fields including computer science and deep learning. Optimizing matrix-vector multiplication, especially in the context of GPU programming and CUDA can help us learn many new things.
 
-In this worklog, we will start by benchmarking cuBLAS's matrix-vector multiplication performance then we will iteratively optimize it in CUDA to see how close we can get to cuBLAS. The intention is to not replace it, but to learn from it. The NVIDIA GPU used for this worklog is one **GTX 1050Ti** (that's all I have got right now). By the end of this worklog, we will achieve what the following figure shows:
+In this worklog, we will start by benchmarking [cuBLAS](https://developer.nvidia.com/cublas)'s matrix-vector multiplication performance then we will iteratively optimize it in CUDA to see how close we can get to cuBLAS. The intention is to not replace it, but to learn from it. The NVIDIA GPU used for this worklog is one **GTX 1050Ti** (that's all I have got right now). By the end of this worklog, we will achieve what the following figure shows:
 
-![Benchmark results](./media/benchmark_results.png)
+![Benchmark results](https://raw.githubusercontent.com/Maharshi-Pandya/cudacodes/refs/heads/master/matvec/media/benchmark_results.png)
 
 The full code is available on the GitHub repository: [Optimizing SGEMV in CUDA](https://github.com/Maharshi-Pandya/cudacodes/tree/master/matvec)
 
@@ -40,7 +40,7 @@ $$
 \textbf{y} = \textbf{A} \cdot \textbf{x}
 $$
 
-![SGEMV computation](./media/sgemv-computation.png)
+![SGEMV computation](https://raw.githubusercontent.com/Maharshi-Pandya/cudacodes/refs/heads/master/matvec/media/sgemv-computation.png)
 
 The figure above and the pseudocode below shows this computation. Note that each row of the matrix $\textbf{A}$ performs a dot product with the entire input vector $\textbf{x}$ to compute one element of the output vector $\textbf{y}$.
 
@@ -234,7 +234,7 @@ Similary, we can see that for this particular warp the elements of the matrix `m
 
 The matrix `matd` is stored in row-major format in the global memory i.e. the elements of the matrix in each row are next to each other (in consecutive memory addresses). The figure below shows the difference of coalesced vs. non-coalesced accesses in the matrix.
 
-![Coalesced access](./media/coalesced-access.png)
+![Coalesced access](https://raw.githubusercontent.com/Maharshi-Pandya/cudacodes/refs/heads/master/matvec/media/coalesced-access.png)
 
 
 In this kernel, each block will operate on one row of the matrix. Also, we will assume that each block contains of only $32$ threads i.e. $1$ warp. Consecutive threads in the warp will load consecutive elements in the row of the matrix `matd` and the vector `vecd`. We will also have a private variable (private to each thread in a warp) called `partial_sum` which will hold the partial sum of the elements processed by one particular thread. The below code snippet shows this:
@@ -412,7 +412,7 @@ With this kernel, **we achieved $88.25$% of peak memory bandwidth and $49.46$ GF
 
 We can plot the performance of vectorized loads kernel against cuBLAS for different matrix and vector sizes. Here's what our custom kernel looks like :D
 
-![Vectorized vs cuBLAS](./media/benchmark_results.png)
+![Vectorized vs cuBLAS](https://raw.githubusercontent.com/Maharshi-Pandya/cudacodes/refs/heads/master/matvec/media/benchmark_results.png)
 
 
 ## Conclusion
