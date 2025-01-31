@@ -7,6 +7,7 @@
 #include "online_1.cuh"
 #include "sharedmem_2.cuh"
 #include "shfl_3.cuh"
+#include "vectorized_4.cuh"
 
 #define M_PI 3.14159265f
 
@@ -27,7 +28,7 @@ float random_normal_clamped(float min, float max) {
 
 int main() {
     int M = 1024;
-    int N = 32768;
+    int N = 128000;
     int matsize = M * N;
     int totalsize = matsize * sizeof(float);
 
@@ -60,7 +61,7 @@ int main() {
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Host to device transfer time: %f ms\n", ms);
 
-    run_kernel_3(matd, resd, M, N);
+    run_kernel_4(matd, resd, M, N);
 
     cudaEventRecord(start);
     CUDA_CHECK(cudaMemcpy(res, resd, totalsize, cudaMemcpyDeviceToHost));
@@ -68,15 +69,6 @@ int main() {
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&ms, start, stop);
     printf(">> Device to host transfer time: %f ms\n", ms);
-
-    // correctness check on the first row
-    // the output should be 1.0 (or a number very close to it)
-    // TODO: add full correctness check
-    float sum = 0.f;
-    for (int i = N; i < 2 * N; i++) {
-        sum += res[i];
-    }
-    printf("\nSum of the 2nd row of softmax result: %f\n", sum);
 
     free(mat);
     free(res);

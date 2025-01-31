@@ -2,7 +2,7 @@ import torch
 import time
 
 # Initialize the matrix
-matrix = torch.randn(1024, 32768, device='cuda', dtype=torch.float32)
+matrix = torch.randn(1024, 128000, device='cuda', dtype=torch.float32)
 
 # Warm up
 _ = torch.nn.functional.softmax(matrix, dim=-1)
