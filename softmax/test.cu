@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 
+#include "blocktiling_5.cuh"
 #include "cuda_utils.cuh"
 #include "naive_0.cuh"
 #include "online_1.cuh"
