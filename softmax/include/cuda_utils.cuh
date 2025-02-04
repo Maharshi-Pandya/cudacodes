@@ -19,4 +19,6 @@ inline void cudaAssert(cudaError_t code, const char *file, int line) {
 }
 #define CEIL_DIV(x, y) ((x) >= 0 ? (((x) + (y) - 1) / (y)) : ((x) / (y)))
 
+#define M_PI 3.14159265f
+
 #endif  // CUDA_UTILS_CUH

@@ -10,8 +10,6 @@
 #include "shfl_3.cuh"
 #include "vectorized_4.cuh"
 
-#define M_PI 3.14159265f
-
 /*
 Helper function to generate a clamped random number sampled from a
 normal distribution with mean 0 and std 1
@@ -28,8 +26,8 @@ float random_normal_clamped(float min, float max) {
 }
 
 int main() {
-    int M = 1024;
-    int N = 128000;
+    int M = 4096;
+    int N = 4096;
     int matsize = M * N;
     int totalsize = matsize * sizeof(float);
 
