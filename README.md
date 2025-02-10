@@ -1,10 +1,29 @@
-# cudacodes
+# CUDA Code Explorations
 
-This repository contains my learnings and programs related to CUDA in C/C++ in no particular order. Any/every directory here will contain code(s) related to any topic. The codes will be heavily commented as well so anyone going through it would know what it is doing.
+This repository showcases my journey learning and experimenting with CUDA, primarily using C/C++. Inside, you'll find code examples, insights, and optimizations related to various CUDA concepts. Each directory focuses on a specific topic, with extensively commented code to guide understanding.
 
+## What's Inside?
 
-### Non-exhaustive list of codes
+This repo contains:
 
-- **softmax**: Contains the kernels for naive, online, and optimized softmax operation.
-- **matmul**: Contains the kernels for tiled matrix multiplication for 2D matrices.
-- **query-device**: Contains the code for querying the device (GPU) properties.
+*   **Practical Examples:** Hands-on CUDA code for common operations.
+*   **Optimizations:** Explores different optimization techniques to improve performance.
+*   **Well-Commented Code:** Every line is explained, making it easy to follow along.
+*   **Learning Resource:**  A place to learn from and improve your own CUDA skills.
+
+## Quick Navigation
+
+*   **`softmax/`**: Explores various softmax implementations, from naive to optimized.
+*   **`matmul/`**: Demonstrates matrix multiplication with tiling strategies.
+*   **`matvec/`**: Iteratively optimizes matrix-vector multiplication (SGEMV) to achieve cuBLAS-like performance.
+*   **`query-device/`**:  A simple tool to get device information of GPU.
+*   **`flash-attention/`**: Exploration of flash attention algorithms (Work in progress).
+
+## Getting Started
+
+1.  Clone the repository:
+   ```
+    git clone https://github.com/Maharshi-Pandya/cudacodes.git
+   ```
+2. Navigate to the directory of interest (e.g., `cd matmul`)
+3. Check the `README.md` inside the directory to learn how to compile and run the examples.
