@@ -120,13 +120,15 @@ __global__ void flash_attn_1_kernel(float* Q, float* K, float* V, int N, int d, 
                     }
                 }
             }
-            __syncthreads();
 
             int s_row = tx / Bc;
             int s_col = tx % Bc;
 
-            mi[s_row] = m[lm_off + (i * Br) + s_row];
-            li[s_row] = l[lm_off + (i * Br) + s_row];
+            if (s_col == 0) {
+                mi[s_row] = m[lm_off + (i * Br) + s_row];
+                li[s_row] = l[lm_off + (i * Br) + s_row];
+            }
+            __syncthreads();
 
             // compute S = Qi * Kj^T where shape of S: (Br, Bc)
             // TODO: reduce shared memory bank conflicts
@@ -168,8 +170,10 @@ __global__ void flash_attn_1_kernel(float* Q, float* K, float* V, int N, int d, 
                     acc += Sij[s_row * Bc + c] * Vj[c * d + col];
 
                 int global_row = (i * Br) + s_row;
-                if (global_row < N)
-                    O[qkv_off + global_row * d + col] = (1 / li_new[s_row]) * ((li[s_row] * expf(mi[s_row] - mi_new[s_row]) * O[qkv_off + global_row * d + col]) + (expf(mij_dash[s_row] - mi_new[s_row]) * acc));
+                if (global_row < N) {
+                    Oi[s_row * d + col] = (1 / li_new[s_row]) * ((li[s_row] * expf(mi[s_row] - mi_new[s_row]) * Oi[s_row * d + col]) + (expf(mij_dash[s_row] - mi_new[s_row]) * acc));
+                    O[qkv_off + global_row * d + col] = Oi[s_row * d + col];
+                }
             }
 
             // update max and norm for next iteration
@@ -203,7 +207,7 @@ torch::Tensor fa_forward(torch::Tensor Q, torch::Tensor K, torch::Tensor V) {
     l = l.to(device);
     m = m.to(device);
 
-    const int smem_size = ((Br * Bc) + (4 * Bc * d) + (5 * Br)) * sizeof(float);
+    const int smem_size = ((Br * Bc) + (2 * Br * d) + (2 * Bc * d) + (5 * Br)) * sizeof(float);
     int max_sram_size;
     cudaDeviceGetAttribute(&max_sram_size, cudaDevAttrMaxSharedMemoryPerBlock, 0);
     printf("Max shared memory: %d, requested shared memory: %d \n", max_sram_size, smem_size);
@@ -219,9 +223,9 @@ torch::Tensor fa_forward(torch::Tensor Q, torch::Tensor K, torch::Tensor V) {
 }
 
 int main() {
-    int batch_size = 1;
+    int batch_size = 16;
     int n_head = 8;
-    int seq_len = 128;
+    int seq_len = 512;
     int head_embd = 64;
 
     int qkv_size = batch_size * n_head * seq_len * head_embd;
@@ -251,7 +255,7 @@ int main() {
     int Tr = ceil((float)seq_len / Br);
     float softmax_scale = 1.0 / sqrt(head_embd);
 
-    const int smem_size = ((Br * Bc) + (4 * Bc * head_embd) + (5 * Br)) * sizeof(float);
+    const int smem_size = ((Br * Bc) + (2 * Br * head_embd) + (2 * Bc * head_embd) + (5 * Br)) * sizeof(float);
     int max_sram_size;
     cudaDeviceGetAttribute(&max_sram_size, cudaDevAttrMaxSharedMemoryPerBlock, 0);
     printf("Max shared memory: %d, requested shared memory: %d \n", max_sram_size, smem_size);

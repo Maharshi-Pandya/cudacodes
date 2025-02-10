@@ -6,3 +6,4 @@ __pycache__
 scratchpad.md
 .vscode
 *.ptx
+flash-attention/fa2
