@@ -4,4 +4,5 @@
 */build/*
 __pycache__
 scratchpad.md
-flash-attention
+.vscode
+*.ptx
