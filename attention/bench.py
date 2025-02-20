@@ -2,6 +2,7 @@ import os
 import time
 import math
 import torch
+torch.backends.cuda.matmul.allow_tf32 = True
 from torch.nn import functional as F
 from torch.utils.cpp_extension import load
 from pycublas import cublas_create_handle, cublas_destroy_handle

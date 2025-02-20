@@ -150,6 +150,7 @@ __global__ void softmax_kernel_inplace(float *__restrict__ X, int M, int N) {
 
 torch::Tensor attention_forward(uint64_t handle, torch::Tensor Q, torch::Tensor K, torch::Tensor V) {
     cublasHandle_t cu_handle = reinterpret_cast<cublasHandle_t>(handle);
+    cublasSetMathMode(cu_handle, CUBLAS_TF32_TENSOR_OP_MATH);
 
     int bs = Q.size(0);
     int nh = Q.size(1);
