@@ -637,3 +637,16 @@ In this worklog, we iteratively optimized the softmax operation starting from Py
 - Follow me on X (formerly twitter) for real time updates about ML, CUDA, and my life in general: [Twitter profile](https://x.com/mrsiipa)
 
 Thank you for reading!
+
+## Appendix: Softmax benchmark results on RTX 4090
+
+CUDA12.6 + torch2.6
+
+|kernel|(1024, 2048)|(1024, 4096)|(1024, 8192)|(1024, 16384)|(1024, 32768)|(1024, 65536)|(1024, 131072)|
+|---|---|---|---|---|---|---|---|
+|Pytorch baseline|0.213|0.232|0.411|0.565|0.958|2.906|24.702|
+|Kernel 1 - Naive softmax|3.481472|6.811648|14.022656|27.742496|56.481441|111.836159|326.116150|
+|Kernel 2 - Online softmax|0.112640|0.035840|0.070752|0.138624|0.282272|0.656384|1.712128|
+|Kernel 3 - Shared memory and reductions|0.069632|0.026848|0.055296|0.130048|0.280576|0.650240|29.936544|
+|Kernel 4 - Shuffle instructions|13.058048|0.025280|0.061472|0.105472|0.267040|0.668672|34.084866|
+|Kernel 5 - Vectorization|11.674624|0.024576|0.041984|0.104800|0.272256|0.684032|1.744896|
