@@ -57,48 +57,12 @@ __global__ void softmax_kernel_4(float* __restrict__ xd, float* __restrict__ res
     }
     __syncthreads();
 
-    // each thread will have its own local max
-    // we store it in shared memory for reduction
-    // smem[tid] = local_max;
-    // __syncthreads();
-
     // warp level reduction using XOR shuffle ('exchanges' the values in the threads)
     // note: if there are 256 threads in one block (8 warps of 32 threads each)
     // the following for loop reduces the value in all the 8 warps
     // the 8 warps contain the 8 maximum values of the 32 threads that reside in those warps
     // float val = smem[tid];
-    float val = local_max;
-    for (int offset = warpSize / 2; offset > 0; offset /= 2) {
-        val = fmaxf(val, __shfl_down_sync(0xffffffff, val, offset));
-    }
-
-    // when blockDim is greater than 32, we need to do a block level reduction
-    // AFTER warp level reductions since we have the 8 maximum values that needs to be reduced again
-    // the global max will be stored in the first warp
-    if (blockDim.x > warpSize) {
-        if (tid % warpSize == 0) {
-            // which warp are we at?
-            // store the value in its first thread index
-            smem[tid / warpSize] = val;
-        }
-        __syncthreads();
-
-        // first warp will do global reduction only
-        // this is possible because we stored the values in the shared memory
-        // so the threads in the first warp will read from it and then reduce
-        if (tid < warpSize) {
-            val = (tid < CEIL_DIV(blockDim.x, warpSize)) ? smem[tid] : -INFINITY;
-            for (int offset = warpSize / 2; offset > 0; offset /= 2) {
-                val = fmaxf(val, __shfl_down_sync(0xffffffff, val, offset));
-            }
-            if (tid == 0) smem[0] = val;
-        }
-    } else {
-        // this is for when the number of threads in a block are not
-        // greater than the warp size, in that case we already reduced
-        // so we can store the value
-        if (tid == 0) smem[0] = val;
-    }
+    blockReduceMax<float>(local_max, smem, -INFINITY);
     __syncthreads();
 
     // we got the global row max now
@@ -106,35 +70,11 @@ __global__ void softmax_kernel_4(float* __restrict__ xd, float* __restrict__ res
     __syncthreads();
 
     // each thread will have its own local_norm
-    // we will store the corrected local_norm in the shared memory
-    // smem[tid] = local_norm * expf(local_max - row_max);
-    // __syncthreads();
-
+    // we will store the corrected local_norm and reduce it
     // same reduction algorithm as above, but instead of max reduction
     // we do a sum reduction i.e. we accumulate the values
-    // val = smem[tid];
-    val = local_norm * expf(local_max - row_max);
-    for (int offset = warpSize / 2; offset > 0; offset /= 2) {
-        val += __shfl_down_sync(0xffffffff, val, offset);
-    }
-
-    if (blockDim.x > warpSize) {
-        if (tid % warpSize == 0) {
-            smem[tid / warpSize] = val;
-        }
-        __syncthreads();
-
-        // first warp will do global reduction
-        if (tid < warpSize) {
-            val = (tid < CEIL_DIV(blockDim.x, warpSize)) ? smem[tid] : 0.0f;
-            for (int offset = warpSize / 2; offset > 0; offset /= 2) {
-                val += __shfl_down_sync(0xffffffff, val, offset);
-            }
-            if (tid == 0) smem[0] = val;
-        }
-    } else {
-        if (tid == 0) smem[0] = val;
-    }
+    float val = local_norm * expf(local_max - row_max);
+    blockReduceSum(val, smem, 0.0f);
     __syncthreads();
 
     float row_norm = smem[0];

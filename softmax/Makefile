@@ -15,7 +15,7 @@ endif
 
 # Compiler and flags
 NVCC = nvcc
-CFLAGS = -std=c++17 -allow-unsupported-compiler
+CFLAGS = -std=c++17 --extended-lambda
 
 # Directories
 INCLUDE_DIR = include
