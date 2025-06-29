@@ -18,8 +18,6 @@ an instuction parallely on GPU so no chance of race conditions.
 We will also use vectorized loads and stores.
 */
 __global__ void softmax_kernel_4(float* __restrict__ xd, float* __restrict__ resd, int M, int N) {
-    assert(N % 4 == 0);
-
     // max and norm reduction will happen in shared memory (static)
     extern __shared__ float smem[];
 
@@ -34,6 +32,7 @@ __global__ void softmax_kernel_4(float* __restrict__ xd, float* __restrict__ res
 
     // cast as float4
     int n_float4s = N / 4;
+    int tail = N % 4;
     float4* input_row_vec = reinterpret_cast<float4*>(input_row);
     float4* output_row_vec = reinterpret_cast<float4*>(output_row);
     float maxval = -INFINITY;
@@ -55,6 +54,16 @@ __global__ void softmax_kernel_4(float* __restrict__ xd, float* __restrict__ res
         local_norm += __expf(elem.z - maxval);
         local_norm += __expf(elem.w - maxval);
     }
+
+    // handle extra row elements
+    if (tail && tid < tail) {
+        float val = input_row[n_float4s * 4 + tid];
+        if (val > local_max) {
+            local_norm *= __expf(local_max - val);
+            local_max = val;
+        }
+        local_norm += __expf(val - local_max);
+    }
     __syncthreads();
 
     // warp level reduction using XOR shuffle ('exchanges' the values in the threads)
@@ -74,7 +83,7 @@ __global__ void softmax_kernel_4(float* __restrict__ xd, float* __restrict__ res
     // same reduction algorithm as above, but instead of max reduction
     // we do a sum reduction i.e. we accumulate the values
     float val = local_norm * expf(local_max - row_max);
-    blockReduceSum(val, smem, 0.0f);
+    blockReduceSum<float>(val, smem, 0.0f);
     __syncthreads();
 
     float row_norm = smem[0];
@@ -90,6 +99,12 @@ __global__ void softmax_kernel_4(float* __restrict__ xd, float* __restrict__ res
         elem.w = __expf(elem.w - row_max) / row_norm;
 
         output_row_vec[i] = elem;
+    }
+    // write tail elements
+    if (tail && tid < tail)
+    {
+        float val = input_row[n_float4s * 4 + tid];
+        output_row[n_float4s * 4 + tid] = __expf(val - row_max) / row_norm;
     }
 }
 
